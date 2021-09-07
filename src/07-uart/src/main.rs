@@ -3,14 +3,10 @@
 
 use cortex_m_rt::entry;
 use rtt_target::rtt_init_print;
+use rtt_target::rprintln;
 use panic_rtt_target as _;
-
-#[cfg(feature = "v1")]
-use microbit::{
-    hal::prelude::*,
-    hal::uart,
-    hal::uart::{Baudrate, Parity},
-};
+use core::fmt::Write;
+use heapless::{Vec, consts};
 
 #[cfg(feature = "v2")]
 use microbit::{
@@ -29,16 +25,6 @@ fn main() -> ! {
     rtt_init_print!();
     let board = microbit::Board::take().unwrap();
 
-    #[cfg(feature = "v1")]
-    let mut serial = {
-        uart::Uart::new(
-            board.UART0,
-            board.uart.into(),
-            Parity::EXCLUDED,
-            Baudrate::BAUD115200,
-        )
-    };
-
     #[cfg(feature = "v2")]
     let mut serial = {
         let serial = uarte::Uarte::new(
@@ -50,8 +36,35 @@ fn main() -> ! {
         UartePort::new(serial)
     };
 
-    nb::block!(serial.write(b'X')).unwrap();
-    nb::block!(serial.flush()).unwrap();
+    // write!(serial, "Halts maul!\n").unwrap();
+    // nb::block!(serial.flush()).unwrap();
 
-    loop {}
+    let mut buffer: Vec<u8, consts::U32> = Vec::new();
+
+    loop {
+         // let byte = nb::block!(serial.read()).unwrap();
+         // rprintln!("RECV: {}", byte);
+        // nb::block!(serial.write(byte)).unwrap();
+        // nb::block!(serial.flush()).unwrap();
+
+        buffer.clear();
+
+        loop {
+            let byte = nb::block!(serial.read()).unwrap();
+
+            if buffer.push(byte).is_err() {
+                writeln!(serial, "ERR: Pushing to buffer failed!");
+                break;
+            }
+
+            if byte == 13 {
+                for byte in &buffer {
+                    nb::block!(serial.write(*byte)).unwrap();
+                }
+
+                nb::block!(serial.flush()).unwrap();
+                break;
+            }
+        }
+    }
 }

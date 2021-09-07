@@ -1,14 +1,14 @@
 [default.general]
 # v2
-# chip = "nrf52833"
+chip = "nrf52833"
 # v1
 # chip = "nrf51822"
 
 [default.reset]
-halt_afterwards = true
+halt_afterwards = false
 
 [default.rtt]
-enabled = false
+enabled = true
 
 [default.gdb]
-enabled = true
+enabled = false
